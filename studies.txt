@@ -1,0 +1,6 @@
+https://github.com/stuarteiffert/RNN-for-Human-Activity-Recognition-using-2D-Pose-Input
+
+https://www.researchgate.net/publication/364279614_MediaPipe's_Landmarks_with_RNN_for_Dynamic_Sign_Language_Recognition
+
+https://web.stanford.edu/class/cs231a/prev_projects_2016/final%20(1).pdf
+

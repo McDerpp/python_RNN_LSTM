@@ -1,0 +1,108 @@
+
+prediction =[]
+one_exercise = []
+# max length of sequence
+for y in range(31):
+    sequence_input=[]
+    # max num of landmark x and y flattened
+    for x in range(66):
+        sequence_input.append(0)
+    one_exercise.append(sequence_input)
+
+
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+mp_drawing = mp.solutions.drawing_utils
+
+# cap = cv2.VideoCapture("vid4.mp4")
+cap = cv2.VideoCapture(0)
+frame_ctr = 0
+frame_ctr_threshold = 1
+exercise_ctr = 0
+prev_prediction = 0
+# it means it is waiting to reset
+prediction_buffer_threshold = .02
+model = tf.lite.Interpreter(model_path="D:\CLARK\Documents\RNN\RNN_proofOfConcept\converted_model2.tflite")
+
+while True:
+    frame_ctr += 1
+    # print(frame_ctr)
+    ret, frame = cap.read()
+    frame = cv2.flip(frame, 1)
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = pose.process(image_rgb)
+
+    if not ret:
+        break
+
+
+
+
+    if results.pose_landmarks:
+        temp_sequence=[]
+        for idx, landmark in enumerate(results.pose_landmarks.landmark):
+            x = landmark.x
+            y = landmark.y
+            # print(idx,")",x,"---",prev_array[idx][0],)
+            # print(idx)
+            temp_sequence.append(x)
+            temp_sequence.append(y)
+        one_exercise.append(temp_sequence)
+
+    # if max length of the exercise sequence was reached then pop it pop off
+        if len(one_exercise) >= 31:
+            one_exercise.pop(0)
+        
+        if frame_ctr >= frame_ctr_threshold:            
+            frame_ctr = 0
+            
+            prediction = np.array(one_exercise)
+            prediction = prediction.astype(np.float32)
+            prediction = prediction.reshape(1,31,66)
+            current_prediction = model.predict(prediction)[0][0]
+            print(current_prediction)
+            if current_prediction >=.94:
+                current_prediction = current_prediction
+                if prev_prediction + prediction_buffer_threshold >= current_prediction and prev_prediction - prediction_buffer_threshold <= current_prediction:
+                    None
+                else:
+                    exercise_ctr +=1
+
+                prev_prediction = current_prediction                
+                
+
+            # interpreter.reset_all_variables()
+        
+
+
+        # interpreter.set_tensor(input_details[0]['index'], [prediction])
+        # interpreter.invoke()
+        # output_data = interpreter.get_tensor(output_details[0]['index'])
+        # predicted_class = np.argmax(output_data)
+        # print("Predicted Class:", predicted_class)
+        # print("Predicted Class:", output_data)
+
+        
+        # print(len(one_exercise))
+        # print(prediction.shape)
+        # 
+        # 
+        # if model.predict(prediction)[0][0]>=.8:
+        #     print('correct')
+    cv2.putText(frame, str(exercise_ctr), (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+    cv2.putText(frame, str(current_prediction), (20, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+    mp_drawing.draw_landmarks(
+        frame,
+        results.pose_landmarks,
+        mp_pose.POSE_CONNECTIONS,
+        landmark_drawing_spec=mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2),
+        connection_drawing_spec=mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2)
+    )
+
+    cv2.imshow('MediaPipe Pose', frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
